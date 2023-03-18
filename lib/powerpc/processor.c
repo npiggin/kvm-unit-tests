@@ -78,6 +78,16 @@ void sleep_tb(uint64_t cycles)
 {
 	uint64_t start, end, now;
 
+	if (machine_is_powernv()) {
+		/*
+		 * Could use 'stop' to sleep here which would be interesting.
+		 * stop with ESL=0 should be simple enough, ESL=1 would require
+		 * SRESET based wakeup which is more involved.
+		 */
+		delay(cycles);
+		return;
+	}
+
 	start = now = get_tb();
 	end = start + cycles;
 

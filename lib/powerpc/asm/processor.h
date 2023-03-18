@@ -3,6 +3,7 @@
 
 #include <libcflat.h>
 #include <asm/ptrace.h>
+#include <asm/ppc_asm.h>
 
 #ifndef __ASSEMBLY__
 void handle_exception(int trap, void (*func)(struct pt_regs *, void *), void *);
@@ -41,6 +42,15 @@ static inline uint64_t mfmsr(void)
 static inline void mtmsr(uint64_t msr)
 {
 	asm volatile ("mtmsrd %[msr]" :: [msr] "r" (msr) : "memory");
+}
+
+/*
+ * This returns true on PowerNV / OPAL machines which run in hypervisor
+ * mode. False on pseries / PAPR machines that run in guest mode.
+ */
+static inline bool machine_is_powernv(void)
+{
+	return !!(mfmsr() & (1ULL << MSR_HV_BIT));
 }
 
 static inline uint64_t get_tb(void)
