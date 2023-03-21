@@ -43,5 +43,6 @@
 
 #define SPR_HSRR0	0x13A
 #define SPR_HSRR1	0x13B
+#define SPR_HEIR	0x153
 
 #endif /* _ASMPOWERPC_PPC_ASM_H */
