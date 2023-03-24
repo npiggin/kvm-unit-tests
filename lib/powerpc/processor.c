@@ -19,11 +19,23 @@ static struct {
 void handle_exception(int trap, void (*func)(struct pt_regs *, void *),
 		      void * data)
 {
+	if (trap & 0xff) {
+		printf("invalid exception handler %#x\n", trap);
+		abort();
+	}
+
 	trap >>= 8;
 
 	if (trap < 16) {
+		if (func && handlers[trap].func) {
+			printf("exception handler installed twice %#x\n", trap);
+			abort();
+		}
 		handlers[trap].func = func;
 		handlers[trap].data = data;
+	} else {
+		printf("invalid exception handler %#x\n", trap);
+		abort();
 	}
 }
 
