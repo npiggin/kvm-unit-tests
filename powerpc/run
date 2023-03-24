@@ -47,6 +47,7 @@ fi
 D=""
 if [[ "$MACHINE" == "powernv"* ]] ; then
 	D+="-device ipmi-bmc-sim,id=bmc0 -device isa-ipmi-bt,bmc=bmc0,irq=10"
+	D+=" -bios /home/npiggin/src/skiboot/skiboot.lid"
 fi
 
 command="$qemu -nodefaults $M $B $D"
