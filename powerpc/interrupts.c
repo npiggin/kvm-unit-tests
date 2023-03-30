@@ -97,6 +97,8 @@ static void test_dseg(void)
 
 	report_prefix_push("data segment");
 
+	/* Radix guest (e.g. PowerVM) needs 0x300 */
+	handle_exception(0x300, &dseg_handler, NULL);
 	handle_exception(0x380, &dseg_handler, NULL);
 
 	asm volatile(
@@ -109,6 +111,7 @@ static void test_dseg(void)
 	report(got_interrupt, "interrupt on NULL dereference");
 	got_interrupt = false;
 
+	handle_exception(0x300, NULL, NULL);
 	handle_exception(0x380, NULL, NULL);
 
 	report_prefix_pop();
