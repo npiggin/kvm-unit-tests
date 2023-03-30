@@ -41,6 +41,8 @@
 #define MSR_HV_BIT	60			/* Hypervisor mode */
 #define MSR_SF_BIT	63			/* 64-bit mode */
 
+#define SPR_FSCR	0x099
+#define FSCR_PREFIX	0x2000
 #define SPR_HSRR0	0x13A
 #define SPR_HSRR1	0x13B
 #define SPR_HEIR	0x153

@@ -210,6 +210,7 @@ static void test_illegal(void)
 	report(!regs_is_prefix(&recorded_regs), "(H)SRR1 prefix bit: %d", regs_is_prefix(&recorded_regs));
 
 	if (cpu_has_prefix()) {
+		mtspr(SPR_FSCR, mfspr(SPR_FSCR) | FSCR_PREFIX);
 		asm volatile(".balign 8 ; .long 0x04000123; .long 0x00badc0d");
 		report(got_interrupt, "interrupt on invalid prefix instruction");
 		got_interrupt = false;
