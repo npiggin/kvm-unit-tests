@@ -6,6 +6,8 @@
 #include <libcflat.h>
 #include <kbuild.h>
 #include <asm/ptrace.h>
+#include <asm/setup.h>
+#include <asm/smp.h>
 
 int main(void)
 {
@@ -50,5 +52,10 @@ int main(void)
 	DEFINE(_XER, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, xer));
 	DEFINE(_CCR, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, ccr));
 	DEFINE(_TRAP, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, trap));
+
+	DEFINE(SIZEOF_STRUCT_CPU, sizeof(struct cpu));
+	DEFINE(EXCEPTION_STACK, offsetof(struct cpu, exception_stack));
+	DEFINE(MAX_CPUS, NR_CPUS);
+
 	return 0;
 }

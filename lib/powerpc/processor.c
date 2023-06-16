@@ -12,6 +12,7 @@
 #include <asm/barrier.h>
 #include <asm/hcall.h>
 #include <asm/handlers.h>
+#include <asm/smp.h>
 
 static struct {
 	void (*func)(struct pt_regs *, void *data);
@@ -43,6 +44,8 @@ void do_handle_exception(struct pt_regs *regs)
 {
 	unsigned char v;
 
+	__current_cpu = (struct cpu *)mfspr(SPR_SPRG0);
+
 	v = regs->trap >> 5;
 
 	if (v < 128 && handlers[v].func) {
@@ -50,8 +53,8 @@ void do_handle_exception(struct pt_regs *regs)
 		return;
 	}
 
-	printf("Unhandled cpu exception %#lx at NIA:0x%016lx MSR:0x%016lx\n",
-			regs->trap, regs->nip, regs->msr);
+	printf("Unhandled CPU%d exception %#lx at NIA:0x%016lx MSR:0x%016lx\n",
+		smp_processor_id(), regs->trap, regs->nip, regs->msr);
 	dump_frame_stack((void *)regs->nip, (void *)regs->gpr[1]);
 	abort();
 }
