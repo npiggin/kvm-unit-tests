@@ -102,6 +102,7 @@ bool cpu_has_hv;
 bool cpu_has_power_mce; /* POWER CPU machine checks */
 bool cpu_has_siar;
 bool cpu_has_heai;
+bool cpu_has_radix;
 bool cpu_has_prefix;
 bool cpu_has_sc_lev; /* sc interrupt has LEV field in SRR1 */
 bool cpu_has_pause_short;
@@ -124,6 +125,7 @@ static void cpu_init_params(void)
 		cpu_has_sc_lev = true;
 		cpu_has_pause_short = true;
 	case PVR_VER_POWER9:
+		cpu_has_radix = true;
 	case PVR_VER_POWER8E:
 	case PVR_VER_POWER8NVL:
 	case PVR_VER_POWER8:
@@ -198,6 +200,7 @@ void cpu_init(struct cpu *cpu, int cpu_id)
 	cpu->stack += SZ_64K - 64;
 	cpu->exception_stack = (unsigned long)memalign(SZ_4K, SZ_64K);
 	cpu->exception_stack += SZ_64K - 64;
+	cpu->pgtable = NULL;
 }
 
 void setup(const void *fdt)
@@ -216,6 +219,7 @@ void setup(const void *fdt)
 	cpu->server_no = fdt_boot_cpuid_phys(fdt);
 	cpu->exception_stack = (unsigned long)boot_exception_stack;
 	cpu->exception_stack += SZ_64K - 64;
+	cpu->pgtable = NULL;
 
 	mtspr(SPR_SPRG0, (unsigned long)cpu);
 	__current_cpu = cpu;
