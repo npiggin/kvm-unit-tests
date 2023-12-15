@@ -46,8 +46,16 @@ start:
 	add	r1, r1, r31
 	add	r2, r2, r31
 
+	/* Zero backpointers in initial stack frame so backtrace() stops */
+	li	r0,0
+	std	r0,0(r1)
+	std	r0,16(r1)
+
+	/* Create entry frame */
+	stdu	r1,-INT_FRAME_SIZE(r1)
+
 	/* save DTB pointer */
-	std	r3, 56(r1)
+	SAVE_GPR(3,r1)
 
 	/*
 	 * Call relocate. relocate is C code, but careful to not use
@@ -101,7 +109,7 @@ start:
 	stw	r4, 0(r3)
 
 	/* complete setup */
-1:	ld	r3, 56(r1)
+1:	REST_GPR(3, r1)
 	bl	setup
 
 	/* run the test */
