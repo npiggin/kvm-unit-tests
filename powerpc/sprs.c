@@ -551,7 +551,7 @@ int main(int argc, char **argv)
 			if (before[i] >> 32)
 				pass = false;
 		}
-		if (!(sprs[i].type & SPR_ASYNC) && (before[i] != after[i]))
+		if (!(sprs[i].type & (SPR_HARNESS|SPR_ASYNC)) && (before[i] != after[i]))
 			pass = false;
 
 		if (sprs[i].width == 32 && !(before[i] >> 32) && !(after[i] >> 32))
