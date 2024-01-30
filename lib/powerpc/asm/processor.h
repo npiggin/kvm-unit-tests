@@ -19,6 +19,8 @@ extern bool cpu_has_prefix;
 extern bool cpu_has_sc_lev;
 extern bool cpu_has_pause_short;
 
+bool in_usermode(void);
+
 static inline uint64_t mfspr(int nr)
 {
 	uint64_t ret;
@@ -51,6 +53,8 @@ static inline void local_irq_enable(void)
 {
 	unsigned long msr;
 
+	assert(!in_usermode());
+
 	asm volatile(
 "		mfmsr	%0		\n \
 		ori	%0,%0,%1	\n \
@@ -61,6 +65,8 @@ static inline void local_irq_enable(void)
 static inline void local_irq_disable(void)
 {
 	unsigned long msr;
+
+	assert(!in_usermode());
 
 	asm volatile(
 "		mfmsr	%0		\n \
@@ -110,5 +116,8 @@ static inline void msleep(uint64_t ms)
 
 void enable_mcheck(void);
 void disable_mcheck(void);
+
+void enter_usermode(void);
+void exit_usermode(void);
 
 #endif /* _ASMPOWERPC_PROCESSOR_H_ */
