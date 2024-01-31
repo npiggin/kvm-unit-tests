@@ -188,6 +188,7 @@ call_handler:
 	.endr
 	mfsprg1	r0
 	std	r0,GPR1(r1)
+	std	r0,0(r1)
 
 	/* lr, xer, ccr */
 
@@ -206,12 +207,12 @@ call_handler:
 	subi	r31, r31, 0b - start_text
 	ld	r2, (p_toc_text - start_text)(r31)
 
-	/* FIXME: build stack frame */
-
 	/* call generic handler */
 
 	addi	r3,r1,STACK_FRAME_OVERHEAD
 	bl	do_handle_exception
+	.global exception_stack_marker
+exception_stack_marker:
 
 	/* restore context */
 
@@ -321,6 +322,7 @@ handler_trampoline:
 	/* nip and msr */
 	mfsrr0	r0
 	std	r0, _NIP(r1)
+	std	r0, INT_FRAME_SIZE+16(r1)
 
 	mfsrr1	r0
 	std	r0, _MSR(r1)
@@ -337,6 +339,7 @@ handler_htrampoline:
 	/* nip and msr */
 	mfspr	r0, SPR_HSRR0
 	std	r0, _NIP(r1)
+	std	r0, INT_FRAME_SIZE+16(r1)
 
 	mfspr	r0, SPR_HSRR1
 	std	r0, _MSR(r1)
