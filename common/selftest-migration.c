@@ -23,8 +23,10 @@ int main(int argc, char **argv)
 
 	report_prefix_push("migration");
 
-	for (i = 0; i < NR_MIGRATIONS; i++)
+	for (i = 0; i < NR_MIGRATIONS; i++) {
 		migrate_quiet();
+		printf("migration done\n");
+	}
 
 	report(true, "simple harness stress test");
 
