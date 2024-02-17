@@ -10,12 +10,7 @@
 #include <libcflat.h>
 #include <migrate.h>
 
-#if defined(__arm__) || defined(__aarch64__)
-/* arm can only call getchar 15 times */
-#define NR_MIGRATIONS 15
-#else
 #define NR_MIGRATIONS 100
-#endif
 
 int main(int argc, char **argv)
 {

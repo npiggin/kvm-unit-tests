@@ -209,6 +209,9 @@ do_migration ()
 	while ! [ -S ${dst_incoming} ] ; do sleep 0.1 ; done
 	while ! [ -S ${dst_qmp} ] ; do sleep 0.1 ; done
 
+	# Stop the machine before migration. This works around a QEMU
+	# problem with memory updates being lost.
+	qmp ${src_qmp} '"stop"' > ${src_qmpout}
 	qmp ${src_qmp} '"migrate", "arguments": { "uri": "unix:'${dst_incoming}'" }' > ${src_qmpout}
 
 	# Wait for the migration to complete
@@ -232,6 +235,8 @@ do_migration ()
 	done
 
 	qmp ${src_qmp} '"quit"'> ${src_qmpout} 2>/dev/null
+	# Resume the machine after migrate.
+	qmp ${dst_qmp} '"cont"' > ${dst_qmpout}
 
 	# keypress to dst so getchar completes and test continues
 	echo > ${dst_infifo}
