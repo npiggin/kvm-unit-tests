@@ -161,10 +161,15 @@ run_migration ()
 	do_migration || return $?
 
 	while ps -p ${live_pid} > /dev/null ; do
-		# Wait for test exit or further migration messages.
-		if ! grep -q -i "Now migrate the VM" < ${src_out} ; then
-			sleep 0.1
+		if [ "$MIGRATION" = "yes" ]; then
+			# Wait for test exit or further migration messages.
+			if ! grep -q -i "Now migrate the VM" < ${src_out} ; then
+				sleep 0.1
+			else
+				do_migration || return $?
+			fi
 		else
+			# Continuous migration.
 			do_migration || return $?
 		fi
 	done
@@ -192,18 +197,21 @@ do_migration ()
 	incoming_pid=$!
 	cat ${dst_outfifo} | tee ${dst_out} | grep -v "Now migrate the VM (quiet)" &
 
-	# The test must prompt the user to migrate, so wait for the
-	# "Now migrate VM" console message.
-	while ! grep -q -i "Now migrate the VM" < ${src_out} ; do
-		if ! ps -p ${live_pid} > /dev/null ; then
-			echo "ERROR: Test exit before migration point." >&2
-			echo > ${dst_infifo}
-			qmp ${src_qmp} '"quit"'> ${src_qmpout} 2>/dev/null
-			qmp ${dst_qmp} '"quit"'> ${dst_qmpout} 2>/dev/null
-			return 3
-		fi
-		sleep 0.1
-	done
+	if [ "$MIGRATION" = "yes" ]; then
+		# The test must prompt the user to migrate, so wait for the
+		# "Now migrate VM" console message. Continuous migration
+		# does not wait or require changed test.
+		while ! grep -q -i "Now migrate the VM" < ${src_out} ; do
+			if ! ps -p ${live_pid} > /dev/null ; then
+				echo "ERROR: Test exit before migration point." >&2
+				echo > ${dst_infifo}
+				qmp ${src_qmp} '"quit"'> ${src_qmpout} 2>/dev/null
+				qmp ${dst_qmp} '"quit"'> ${dst_qmpout} 2>/dev/null
+				return 3
+			fi
+			sleep 0.1
+		done
+	fi
 
 	# Wait until the destination has created the incoming and qmp sockets
 	while ! [ -S ${dst_incoming} ] ; do sleep 0.1 ; done
@@ -211,7 +219,7 @@ do_migration ()
 
 	# Stop the machine before migration. This works around a QEMU
 	# problem with memory updates being lost.
-	qmp ${src_qmp} '"stop"' > ${src_qmpout}
+#	qmp ${src_qmp} '"stop"' > ${src_qmpout}
 	qmp ${src_qmp} '"migrate", "arguments": { "uri": "unix:'${dst_incoming}'" }' > ${src_qmpout}
 
 	# Wait for the migration to complete
@@ -236,10 +244,14 @@ do_migration ()
 
 	qmp ${src_qmp} '"quit"'> ${src_qmpout} 2>/dev/null
 	# Resume the machine after migrate.
-	qmp ${dst_qmp} '"cont"' > ${dst_qmpout}
+#	qmp ${dst_qmp} '"cont"' > ${dst_qmpout}
 
-	# keypress to dst so getchar completes and test continues
-	echo > ${dst_infifo}
+	echo "MIGRATED"
+
+	if [ "$MIGRATION" = "yes" ]; then
+		# keypress to dst so getchar completes and test continues
+		echo > ${dst_infifo}
+	fi
 	rm ${dst_infifo}
 
 	# Ensure the incoming socket is removed, ready for next destination
@@ -304,7 +316,7 @@ run_panic ()
 
 migration_cmd ()
 {
-	if [ "$MIGRATION" = "yes" ]; then
+	if [ "$MIGRATION" = "yes" ] || [ "$MIGRATION" = "continuous" ]; then
 		echo "run_migration"
 	fi
 }

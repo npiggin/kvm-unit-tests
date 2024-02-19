@@ -9,23 +9,42 @@
  */
 #include <libcflat.h>
 #include <migrate.h>
+#include <asm/barrier.h>
 
-#define NR_MIGRATIONS 100
+#define NR_MIGRATIONS 10000
+
+#define noinline __attribute__((noinline))
+
+/* QEMU TCG migration lost dirty bit reproducer */
+#define SZ 8
+static char mem1[SZ];
+static char mem2[SZ];
+static noinline int gc(void)
+{
+	static int i;
+	int ret = -1;
+
+	memset(mem1, i, SZ);
+	memset(mem2, i, SZ);
+	assert(!memcmp(mem1, mem2, SZ));
+
+	// return -1;
+	i++;
+	if (i > 100000) {
+		i = 0;
+		ret = 1;
+	}
+
+	return ret;
+}
 
 int main(int argc, char **argv)
 {
-	int i = 0;
-
-	report_prefix_push("migration");
+	int i;
 
 	for (i = 0; i < NR_MIGRATIONS; i++) {
-		migrate_quiet();
-		printf("migration done\n");
+		while (gc() == -1)
+			barrier();
 	}
-
-	report(true, "simple harness stress test");
-
-	report_prefix_pop();
-
-	return report_summary();
+	return 0;
 }
