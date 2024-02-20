@@ -43,3 +43,13 @@ void migrate_once(void)
 	migrated = true;
 	migrate();
 }
+
+/*
+ * When the test has been started in migration mode, but the test case is
+ * skipped and no migration point is reached, this can be used to tell the
+ * harness not to mark it as a failure to migrate.
+ */
+void migrate_skip(void)
+{
+	puts("Skipped VM migration (quiet)\n");
+}
