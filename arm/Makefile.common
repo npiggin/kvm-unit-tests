@@ -6,6 +6,7 @@
 
 tests-common  = $(TEST_DIR)/selftest.$(exe)
 tests-common += $(TEST_DIR)/selftest-migration.$(exe)
+tests-common += $(TEST_DIR)/memory-verify.$(exe)
 tests-common += $(TEST_DIR)/spinlock-test.$(exe)
 tests-common += $(TEST_DIR)/pci-test.$(exe)
 tests-common += $(TEST_DIR)/pmu.$(exe)

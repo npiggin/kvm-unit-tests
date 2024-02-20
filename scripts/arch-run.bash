@@ -111,14 +111,14 @@ timeout_cmd ()
 
 qmp ()
 {
-	echo '{ "execute": "qmp_capabilities" }{ "execute":' "$2" '}' | ncat -U $1
+	echo '{ "execute": "qmp_capabilities" }{ "execute":' "$2" '}' | ncat -U $1 2> /dev/null
 }
 
 qmp_events ()
 {
 	while ! test -S "$1"; do sleep 0.1; done
 	echo '{ "execute": "qmp_capabilities" }{ "execute": "cont" }' |
-		ncat --no-shutdown -U $1 |
+		ncat --no-shutdown -U $1 2> /dev/null |
 		jq -c 'select(has("event"))'
 }
 
@@ -164,7 +164,8 @@ run_migration ()
 
 	while ps -p ${live_pid} > /dev/null ; do
 		# Wait for test exit or further migration messages.
-		if ! grep -q -i "Now migrate the VM" < ${src_out} ; then
+		if [ "$MIGRATION" = "yes" ] &&
+		   ! grep -q -i "Now migrate the VM" < ${src_out} ; then
 			sleep 0.1
 		else
 			do_migration || return $?
@@ -186,19 +187,28 @@ do_migration ()
 	# We have to use cat to open the named FIFO, because named FIFO's,
 	# unlike pipes, will block on open() until the other end is also
 	# opened, and that totally breaks QEMU...
-	mkfifo ${dst_infifo}
-	eval "$migcmdline" \
-		-chardev socket,id=mon,path=${dst_qmp},server=on,wait=off \
-		-mon chardev=mon,mode=control -incoming unix:${dst_incoming} \
-		< <(cat ${dst_infifo}) > ${dst_outfifo} &
+	if [ "$MIGRATION" = "yes" ] ; then
+		mkfifo ${dst_infifo}
+		eval "$migcmdline" \
+		  -chardev socket,id=mon,path=${dst_qmp},server=on,wait=off \
+		  -mon chardev=mon,mode=control -incoming unix:${dst_incoming} \
+		  < <(cat ${dst_infifo}) > ${dst_outfifo} &
+	else
+		eval "$migcmdline" \
+		  -chardev socket,id=mon,path=${dst_qmp},server=on,wait=off \
+		  -mon chardev=mon,mode=control -incoming unix:${dst_incoming} \
+		  > ${dst_outfifo} &
+	fi
+
 	incoming_pid=$!
 	cat ${dst_outfifo} | tee ${dst_out} | \
 		grep -v "Now migrate the VM (quiet)" | \
 		grep -v "Skipped VM migration (quiet)" &
 
-	# The test must prompt the user to migrate, so wait for the
-	# "Now migrate VM" console message.
-	while ! grep -q -i "Now migrate the VM" < ${src_out} ; do
+	# When not in continuous migraiton mode, the test must must prompt the
+	# user to migrate, so wait for the "Now migrate VM" console message.
+	while [ "$MIGRATION" = "yes" ] &&
+	      ! grep -q -i "Now migrate the VM" < ${src_out} ; do
 		if ! ps -p ${live_pid} > /dev/null ; then
 			echo > ${dst_infifo}
 			qmp ${dst_qmp} '"quit"'> ${dst_qmpout} 2>/dev/null
@@ -224,10 +234,17 @@ do_migration ()
 	while ! grep -q '"completed"' <<<"$migstatus" ; do
 		sleep 0.1
 		if ! migstatus=`qmp ${src_qmp} '"query-migrate"'`; then
-			echo "ERROR: Querying migration state failed." >&2
+			if [ "$MIGRATION" = "yes" ] ; then
+				echo "ERROR: Querying migration state failed." >&2
+				ret=2
+			else
+				# continuous migration often finds the
+				# machine exits here, so no error.
+				ret=0
+			fi
 			echo > ${dst_infifo}
 			qmp ${dst_qmp} '"quit"'> ${dst_qmpout} 2>/dev/null
-			return 2
+			return $ret
 		fi
 		migstatus=`grep return <<<"$migstatus"`
 		if grep -q '"failed"' <<<"$migstatus"; then
@@ -241,9 +258,13 @@ do_migration ()
 
 	qmp ${src_qmp} '"quit"'> ${src_qmpout} 2>/dev/null
 
+	echo "MIGRATION COMPLETED"
+
 	# keypress to dst so getchar completes and test continues
-	echo > ${dst_infifo}
-	rm ${dst_infifo}
+	if [ "$MIGRATION" = "yes" ] ; then
+		echo > ${dst_infifo}
+		rm ${dst_infifo}
+	fi
 
 	# Ensure the incoming socket is removed, ready for next destination
 	if [ -S ${dst_incoming} ] ; then
@@ -307,7 +328,7 @@ run_panic ()
 
 migration_cmd ()
 {
-	if [ "$MIGRATION" = "yes" ]; then
+	if [ "$MIGRATION" = "yes" ] || [ "$MIGRATION" = "continuous" ]; then
 		echo "run_migration"
 	fi
 }
